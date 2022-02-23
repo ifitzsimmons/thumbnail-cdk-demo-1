@@ -12,7 +12,7 @@ export class ThumbnailCdkStack extends Stack {
     super(scope, id, props);
 
     const inputBucket = new Bucket(this, 'ThumbnailImageInputBucket', {
-      bucketName: 'thumbnail-image-input',
+      bucketName: `thumbnail-image-input-${this.region}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
     const s3EventSource = new S3EventSource(inputBucket, {
@@ -20,10 +20,10 @@ export class ThumbnailCdkStack extends Stack {
     });
 
     const destinationBucket = new Bucket(this, 'ThumbnailImageDestinationBucket', {
-      bucketName: 'thumbnail-images-destination'
+      bucketName: `thumbnail-images-destination-${this.region}`
     })
     const testArtifactBucket = new Bucket(this, 'ThumbnailTestArtifactsBucket', {
-      bucketName: 'thumbnail-test-artifacts',
+      bucketName: `thumbnail-test-artifacts-${this.region}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
 

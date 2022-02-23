@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
+import { CodeBuildStep, CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { AppStage } from './app-stage';
 import { LambdaInvokeAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 
@@ -31,7 +31,7 @@ export class PipelineStack extends cdk.Stack {
     const appStage = new AppStage(this, 'test', {
       env: {
         account: '928182438953',
-        region: 'eu-west-2',
+        region: 'us-west-2',
       }
     });
     const appStageAction = new LambdaInvokeAction({
@@ -46,5 +46,7 @@ export class PipelineStack extends cdk.Stack {
     });
 
     const stage = pipeline.addStage(appStage);
+
+    // const step = new CodeDeploy()
   }
 }
