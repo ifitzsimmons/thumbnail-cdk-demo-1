@@ -3,6 +3,8 @@ import { Construct } from 'constructs';
 import { CodeBuildStep, CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { AppStage } from './app-stage';
 import { LambdaInvokeAction } from 'aws-cdk-lib/aws-codepipeline-actions';
+import { IStage } from 'aws-cdk-lib/aws-apigateway';
+import { LambdaApplication } from 'aws-cdk-lib/aws-codedeploy';
 
 
 export class PipelineStack extends cdk.Stack {
@@ -38,6 +40,7 @@ export class PipelineStack extends cdk.Stack {
       actionName: 'TestThumbnailCreation',
       lambda: appStage.lambdaStack.testerLambda
     });
+    const { testerLambda } = appStage.lambdaStack;
 
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: 'MyPipeline',
@@ -45,7 +48,19 @@ export class PipelineStack extends cdk.Stack {
       synth: synthStep,
     });
 
-    const stage = pipeline.addStage(appStage);
+    pipeline.addStage(appStage, {
+      // post: [
+      //   new ShellStep('Validate Image Resizer', {
+      //     commands: [
+      //       `aws lambda invoke --function-name ${testerLambda.functionName}`
+      //     ]
+      //   })
+      // ]
+    });
+    // pipeline.addStage(new LambdaApplication(this, 'TestStage', {
+    //   applicationArn: appStage.lambdaStack.testerLambda.functionArn,
+
+    // }))
 
     // const step = new CodeDeploy()
   }

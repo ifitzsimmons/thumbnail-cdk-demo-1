@@ -34,7 +34,7 @@ export class ThumbnailCdkStack extends Stack {
 
     const imageProcessor = new lambda.Function(this, 'ImageProcessor', {
       code: lambda.Code.fromAsset('src/lambda/CreateThumbnail'),
-      handler: 'index.lambda_handler',
+      handler: 'createThumbnail.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
       memorySize: 512,
       timeout: Duration.minutes(1),
@@ -64,7 +64,7 @@ export class ThumbnailCdkStack extends Stack {
 
     this.testerLambda = new lambda.Function(this, 'TestImageProcessor', {
       code: lambda.Code.fromAsset('src/lambda/TestCreateThumbnail'),
-      handler: 'index.lambda_handler',
+      handler: 'testCreateThumbnail.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
       timeout: Duration.minutes(5),
       environment: {
