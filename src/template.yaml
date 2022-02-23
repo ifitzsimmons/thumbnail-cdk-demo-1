@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Runtime: python3.8
+    Timeout: 60
+    Handler: index.lambda_handler
+    Environment:
+      Variables:
+        TABLE_NAME: data-table
+
+Resources:
+  MyLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: layers/myLayer
+      CompatibleRuntimes:
+        - python3.8
+
+  CreateThumbnail:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/CreateThumbnail
+      Policies: AWSLambdaExecute
+      Events:
+        CreateThumbnailEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref SourceBucket
+            Events: s3:ObjectCreated:*
+      Environment:
+        Variables:
+          DestinationBucket: !Ref DestinationBucket
+      Layers:
+        - !Ref MyLayer
+      MemorySize: 256
+
+  SourceBucket:
+    Type: AWS::S3::Bucket
+
+  DestinationBucket:
+    Type: AWS::S3::Bucket

@@ -1,6 +1,24 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { ThumbnailCdkStack } from '../lib/thumbnail-cdk-stack';
+import { PipelineStack } from '../lib/pipeline-stack';
 
 const app = new cdk.App();
-new ThumbnailCdkStack(app, 'ThumbnailCdkStack');
+new PipelineStack(app, 'ThumbnailCdkPipelineStack', {
+  env: {
+    account: '928182438953',
+    region: 'us-east-1',
+  }
+});
+
+// import * as cdk from 'aws-cdk-lib';
+// import { PipelineStack } from '../lib/pipeline-stack';
+
+// const app = new cdk.App();
+// new PipelineStack(app, 'MyPipelineStack', {
+//   env: {
+//     account: '928182438953',
+//     region: 'eu-west-1',
+//   }
+// });
+
+// app.synth();

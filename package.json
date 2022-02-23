@@ -8,6 +8,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
+    "test:lambda": "python3 -m tox -c src/tox.ini",
     "cdk": "cdk"
   },
   "devDependencies": {
