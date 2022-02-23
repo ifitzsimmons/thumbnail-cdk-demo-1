@@ -8,7 +8,8 @@ from datetime import datetime as dt
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-code_pipeline = boto3.client('codepipeline')
+# ToDo: set pipeline constants including pipeline region
+code_pipeline = boto3.client('codepipeline', region_name='us-west-2')
 s3 = boto3.client('s3')
 
 SUPPORTED_IMG_TYPES = ['jpg', 'jpeg', 'png']
