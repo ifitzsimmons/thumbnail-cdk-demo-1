@@ -6,6 +6,14 @@ import { LambdaInvokeAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { IStage } from 'aws-cdk-lib/aws-apigateway';
 import { LambdaApplication } from 'aws-cdk-lib/aws-codedeploy';
 
+/**
+ * ToDo:
+ * 1. Update test lambda permissions with necessary permissions to report pipielines status (done)
+ * 2. Split out LambdaInvoke action into its own lambda that spins up at runtime
+ * 3. Figure out how to add LambdaInvoke Action to pipeline
+ * 4. Copy image into artifact bucket for testing after stack deployment
+ * 5. Clean up repo and create constants
+ */
 
 export class PipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {

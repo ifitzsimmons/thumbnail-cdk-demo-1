@@ -100,5 +100,15 @@ export class ThumbnailCdkStack extends Stack {
         destinationBucket.bucketArn,
       ]
     }));
+    this.testerLambda.addToRolePolicy(new PolicyStatement({
+      sid: 'ReportPipelineJob',
+      effect: Effect.ALLOW,
+      actions: [
+        'codepipeline:PutJobSuccessResult',
+        'codepipeline:PutJobFailureResult',
+        'logs:*'
+      ],
+      resources: ['*']
+    }));
   }
 }
