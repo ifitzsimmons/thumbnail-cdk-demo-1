@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { AppStage } from './app-stage';
 import { LambdaInvokeAction } from 'aws-cdk-lib/aws-codepipeline-actions';
-import { LambdaInvokeStep } from './stage-action/LambdaInvokeAction';
+import { LambdaInvokeStep } from './stage-action/lambda-invoke-action';
 import * as Lambda from 'aws-cdk-lib/aws-lambda';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Duration } from 'aws-cdk-lib';
@@ -58,12 +58,10 @@ export class PipelineStack extends cdk.Stack {
       }
     });
     testerLambda.addToRolePolicy(new PolicyStatement({
-      sid: 'ReportPipelineJob',
+      sid: 'InvokeServiceTester',
       effect: Effect.ALLOW,
       actions: [
-        'codepipeline:PutJobSuccessResult',
-        'codepipeline:PutJobFailureResult',
-        'logs:*'
+        'lambda:InvokeFunction'
       ],
       resources: ['*']
     }));
@@ -79,11 +77,5 @@ export class PipelineStack extends cdk.Stack {
         new LambdaInvokeStep(testerLambda)
       ]
     });
-    // pipeline.addStage(new LambdaApplication(this, 'TestStage', {
-    //   applicationArn: appStage.lambdaStack.testerLambda.functionArn,
-
-    // }))
-
-    // const step = new CodeDeploy()
   }
 }

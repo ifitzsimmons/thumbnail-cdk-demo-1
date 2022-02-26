@@ -7,6 +7,7 @@ import {
 import { IStage } from 'aws-cdk-lib/aws-codepipeline';
 import * as cpactions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as Lambda from "aws-cdk-lib/aws-lambda";
+import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 
 export class LambdaInvokeStep extends Step implements ICodePipelineActionFactory {
   constructor(
@@ -15,6 +16,16 @@ export class LambdaInvokeStep extends Step implements ICodePipelineActionFactory
   ) {
     super('LambdaInvokeStep');
 
+    this.lambda.addToRolePolicy(new PolicyStatement({
+      sid: 'RunPipelineJob',
+      effect: Effect.ALLOW,
+      actions: [
+        'codepipeline:PutJobSuccessResult',
+        'codepipeline:PutJobFailureResult',
+        'logs:*',
+      ],
+      resources: ['*']
+    }));
     // This is necessary if your step accepts things like environment variables
     // that may contain outputs from other steps. It doesn't matter what the
     // structure is, as long as it contains the values that may contain outputs.
