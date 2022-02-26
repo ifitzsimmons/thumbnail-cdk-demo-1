@@ -6,10 +6,12 @@ import { S3EventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export class ThumbnailCdkStack extends Stack {
-  testerLambda: lambda.Function;
+  testerLambdaName: string;
 
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
+
+    this.testerLambdaName = `TestImageProcessor-${this.region}`;
 
     const inputBucket = new Bucket(this, 'ThumbnailImageInputBucket', {
       bucketName: `thumbnail-image-input-${this.region}`,
@@ -62,7 +64,8 @@ export class ThumbnailCdkStack extends Stack {
       ]
     }));
 
-    this.testerLambda = new lambda.Function(this, 'TestImageProcessor', {
+    const testerLambda = new lambda.Function(this, 'TestImageProcessor', {
+      functionName: this.testerLambdaName,
       code: lambda.Code.fromAsset('src/lambda/TestCreateThumbnail'),
       handler: 'testCreateThumbnail.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
@@ -73,7 +76,7 @@ export class ThumbnailCdkStack extends Stack {
         TestArtifactBucket: testArtifactBucket.bucketName,
       }
     });
-    this.testerLambda.addToRolePolicy(new PolicyStatement({
+    testerLambda.addToRolePolicy(new PolicyStatement({
       sid: 'GetTestImgFromBucket',
       effect: Effect.ALLOW,
       actions: ['s3:GetObject', 's3:ListBucket'],
@@ -82,7 +85,7 @@ export class ThumbnailCdkStack extends Stack {
         testArtifactBucket.bucketArn,
       ]
     }));
-    this.testerLambda.addToRolePolicy(new PolicyStatement({
+    testerLambda.addToRolePolicy(new PolicyStatement({
       sid: 'PutImageInInputBucket',
       effect: Effect.ALLOW,
       actions: ['s3:PutObject', 's3:GetObject', 's3:ListBucket'],
@@ -91,7 +94,7 @@ export class ThumbnailCdkStack extends Stack {
         inputBucket.bucketArn,
       ]
     }));
-    this.testerLambda.addToRolePolicy(new PolicyStatement({
+    testerLambda.addToRolePolicy(new PolicyStatement({
       sid: 'AssertImageInDestinationBucket',
       effect: Effect.ALLOW,
       actions: ['s3:GetObject', 's3:ListBucket'],
@@ -99,16 +102,6 @@ export class ThumbnailCdkStack extends Stack {
         `${destinationBucket.bucketArn}/*`,
         destinationBucket.bucketArn,
       ]
-    }));
-    this.testerLambda.addToRolePolicy(new PolicyStatement({
-      sid: 'ReportPipelineJob',
-      effect: Effect.ALLOW,
-      actions: [
-        'codepipeline:PutJobSuccessResult',
-        'codepipeline:PutJobFailureResult',
-        'logs:*'
-      ],
-      resources: ['*']
     }));
   }
 }

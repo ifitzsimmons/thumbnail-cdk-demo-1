@@ -1,10 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { CodeBuildStep, CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
+import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { AppStage } from './app-stage';
 import { LambdaInvokeAction } from 'aws-cdk-lib/aws-codepipeline-actions';
-import { IStage } from 'aws-cdk-lib/aws-apigateway';
-import { LambdaApplication } from 'aws-cdk-lib/aws-codedeploy';
+import { LambdaInvokeStep } from './stage-action/LambdaInvokeAction';
+import * as Lambda from 'aws-cdk-lib/aws-lambda';
+import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Duration } from 'aws-cdk-lib';
 
 /**
  * ToDo:
@@ -13,6 +15,7 @@ import { LambdaApplication } from 'aws-cdk-lib/aws-codedeploy';
  * 3. Figure out how to add LambdaInvoke Action to pipeline
  * 4. Copy image into artifact bucket for testing after stack deployment
  * 5. Clean up repo and create constants
+ * 6. Give pipeline access to invoke lambda function
  */
 
 export class PipelineStack extends cdk.Stack {
@@ -44,11 +47,26 @@ export class PipelineStack extends cdk.Stack {
         region: 'us-west-2',
       }
     });
-    const appStageAction = new LambdaInvokeAction({
-      actionName: 'TestThumbnailCreation',
-      lambda: appStage.lambdaStack.testerLambda
+
+    const testerLambda = new Lambda.Function(this, 'TestImageProcessor', {
+      code: Lambda.Code.fromAsset('src/lambda/tst'),
+      handler: 'integrationTest.lambda_handler',
+      runtime: Lambda.Runtime.PYTHON_3_8,
+      timeout: Duration.minutes(2),
+      environment: {
+        SERVICE_TESTER: appStage.testLambdaName,
+      }
     });
-    const { testerLambda } = appStage.lambdaStack;
+    testerLambda.addToRolePolicy(new PolicyStatement({
+      sid: 'ReportPipelineJob',
+      effect: Effect.ALLOW,
+      actions: [
+        'codepipeline:PutJobSuccessResult',
+        'codepipeline:PutJobFailureResult',
+        'logs:*'
+      ],
+      resources: ['*']
+    }));
 
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: 'MyPipeline',
@@ -57,13 +75,9 @@ export class PipelineStack extends cdk.Stack {
     });
 
     pipeline.addStage(appStage, {
-      // post: [
-      //   new ShellStep('Validate Image Resizer', {
-      //     commands: [
-      //       `aws lambda invoke --function-name ${testerLambda.functionName}`
-      //     ]
-      //   })
-      // ]
+      post: [
+        new LambdaInvokeStep(testerLambda)
+      ]
     });
     // pipeline.addStage(new LambdaApplication(this, 'TestStage', {
     //   applicationArn: appStage.lambdaStack.testerLambda.functionArn,
