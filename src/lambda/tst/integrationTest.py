@@ -47,19 +47,22 @@ def timeout_handler(_signal, _frame):
     put_job_failure(code_pipeline_id, 'Lambda Timeout')
 
 def lambda_handler(event, context):
-  signal.alarm((context.get_remaining_time_in_millis() / 1000) - 1)
+  remaining_seconds = context.get_remaining_time_in_millis() // 1000
+  signal.alarm(remaining_seconds - 1)
   logger.info(f'EVENT:\n', event)
   code_pipeline_id = event['CodePipeline.job'].get('id')
 
   try:
     response = lambda_client.invoke(FunctionName=LAMBDA_NAME)
 
-    if response.get('StatusCode') == 200:
-      put_job_success(code_pipeline_id, 'Image Resize Successfull')
-    else:
+    if response.get('FunctionError') == 'Unhandled':
       exception = json.loads(response.get('Payload').read().decode("utf-8"))['errorMessage']
       put_job_failure(code_pipeline_id, exception)
+    else:
+      put_job_success(code_pipeline_id, 'Image Resize Successfull')
   except Exception as ex:
     put_job_failure(code_pipeline_id, repr(ex))
 
   return 'SUCCESS'
+
+signal.signal(signal.SIGALRM, timeout_handler)

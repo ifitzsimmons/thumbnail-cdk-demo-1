@@ -2,7 +2,6 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { AppStage } from './app-stage';
-import { LambdaInvokeAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { LambdaInvokeStep } from './stage-action/lambda-invoke-action';
 import * as Lambda from 'aws-cdk-lib/aws-lambda';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
