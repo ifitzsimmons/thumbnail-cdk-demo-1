@@ -1,0 +1,7 @@
+bracketSpacing: true
+printWidth: 88
+seim: true
+singleQuote: true
+tabWidth: 2
+tabs: false
+trailingComma: 'es5'

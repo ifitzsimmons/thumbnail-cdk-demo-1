@@ -18,6 +18,9 @@ import { Duration } from 'aws-cdk-lib';
  */
 
 export class PipelineStack extends cdk.Stack {
+  /**
+   * @constructor
+   */
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -25,7 +28,8 @@ export class PipelineStack extends cdk.Stack {
       'ifitzsimmons/cdk-pipeline-with-e2e',
       'main',
       {
-        connectionArn: 'arn:aws:codestar-connections:us-east-1:928182438953:connection/d55151b5-59a4-4724-918b-58113828ef8b'
+        connectionArn:
+          'arn:aws:codestar-connections:us-east-1:928182438953:connection/d55151b5-59a4-4724-918b-58113828ef8b',
       }
     );
 
@@ -36,15 +40,15 @@ export class PipelineStack extends cdk.Stack {
         'npm ci',
         'npm run test:lambda',
         'npm run build',
-        'npx cdk synth'
-      ]
+        'npx cdk synth',
+      ],
     });
 
     const appStage = new AppStage(this, 'test', {
       env: {
         account: '928182438953',
         region: 'us-west-2',
-      }
+      },
     });
 
     const testerLambda = new Lambda.Function(this, 'TestImageProcessor', {
@@ -54,16 +58,16 @@ export class PipelineStack extends cdk.Stack {
       timeout: Duration.minutes(2),
       environment: {
         SERVICE_TESTER: appStage.testLambdaName,
-      }
+      },
     });
-    testerLambda.addToRolePolicy(new PolicyStatement({
-      sid: 'InvokeServiceTester',
-      effect: Effect.ALLOW,
-      actions: [
-        'lambda:InvokeFunction'
-      ],
-      resources: ['*']
-    }));
+    testerLambda.addToRolePolicy(
+      new PolicyStatement({
+        sid: 'InvokeServiceTester',
+        effect: Effect.ALLOW,
+        actions: ['lambda:InvokeFunction'],
+        resources: ['*'],
+      })
+    );
 
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: 'MyPipeline',
@@ -72,9 +76,7 @@ export class PipelineStack extends cdk.Stack {
     });
 
     pipeline.addStage(appStage, {
-      post: [
-        new LambdaInvokeStep(testerLambda)
-      ]
+      post: [new LambdaInvokeStep(testerLambda)],
     });
   }
 }

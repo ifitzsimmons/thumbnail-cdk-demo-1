@@ -65,7 +65,7 @@ def test_image_resized(key_name) -> None:
     sleep(30)
 
 def lambda_handler(event, context):
-  logger.info(f'EVENT:')
+  logger.info('EVENT:')
   logger.info(json.dumps(event, indent=4, sort_keys=True))
   timestamp = int(dt.now().timestamp())
   key_name = f'test/{timestamp}.jpeg'
