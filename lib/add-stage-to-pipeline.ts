@@ -21,7 +21,7 @@ const createIntegrationTestLambda = (
   stageName: StageType,
   testLambdaName: string
 ): Lambda.Function => {
-  const testerLambda = new Lambda.Function(app, 'TestImageProcessor', {
+  const testerLambda = new Lambda.Function(app, `${stageName}TestImageProcessor`, {
     functionName: `IntegrationTest-${stageName}-${appRegion}`,
     code: Lambda.Code.fromAsset('src/lambda/tst'),
     handler: 'integrationTest.lambda_handler',
