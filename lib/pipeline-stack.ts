@@ -1,11 +1,9 @@
-import * as cdk from 'aws-cdk-lib';
+import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
-import { AppStage } from './app-stage';
-import { LambdaInvokeStep } from './stage-action/lambda-invoke-action';
-import * as Lambda from 'aws-cdk-lib/aws-lambda';
-import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Duration } from 'aws-cdk-lib';
+import { GitHubConstants } from './constants/pipeline';
+import { STAGES } from './constants/stages';
+import { addStageToPipeline } from './create-application-stage';
 
 /**
  * ToDo:
@@ -16,21 +14,17 @@ import { Duration } from 'aws-cdk-lib';
  * 5. Clean up repo and create constants
  * 6. Give pipeline access to invoke lambda function
  */
-
-export class PipelineStack extends cdk.Stack {
+export class PipelineStack extends Stack {
   /**
    * @constructor
    */
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     const pipelineTrigger = CodePipelineSource.connection(
-      'ifitzsimmons/cdk-pipeline-with-e2e',
-      'main',
-      {
-        connectionArn:
-          'arn:aws:codestar-connections:us-east-1:928182438953:connection/d55151b5-59a4-4724-918b-58113828ef8b',
-      }
+      GitHubConstants.repo,
+      GitHubConstants.branch,
+      { connectionArn: GitHubConstants.connection }
     );
 
     const synthStep = new ShellStep('Synth', {
@@ -44,39 +38,14 @@ export class PipelineStack extends cdk.Stack {
       ],
     });
 
-    const appStage = new AppStage(this, 'test', {
-      env: {
-        account: '928182438953',
-        region: 'us-west-2',
-      },
-    });
-
-    const testerLambda = new Lambda.Function(this, 'TestImageProcessor', {
-      code: Lambda.Code.fromAsset('src/lambda/tst'),
-      handler: 'integrationTest.lambda_handler',
-      runtime: Lambda.Runtime.PYTHON_3_8,
-      timeout: Duration.minutes(2),
-      environment: {
-        SERVICE_TESTER: appStage.testLambdaName,
-      },
-    });
-    testerLambda.addToRolePolicy(
-      new PolicyStatement({
-        sid: 'InvokeServiceTester',
-        effect: Effect.ALLOW,
-        actions: ['lambda:InvokeFunction'],
-        resources: ['*'],
-      })
-    );
-
     const pipeline = new CodePipeline(this, 'Pipeline', {
-      pipelineName: 'MyPipeline',
+      pipelineName: 'ThumbnailServicePipeline',
       selfMutation: true,
       synth: synthStep,
     });
 
-    pipeline.addStage(appStage, {
-      post: [new LambdaInvokeStep(testerLambda)],
+    STAGES.forEach(({ stageName, account }) => {
+      addStageToPipeline(this, pipeline, stageName, account.id, account.region);
     });
   }
 }
