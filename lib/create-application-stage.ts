@@ -5,6 +5,8 @@ import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Duration } from 'aws-cdk-lib';
 import { CodePipeline } from 'aws-cdk-lib/pipelines';
 import { PipelineStack } from './pipeline-stack';
+import { StageType } from './constants/stages';
+import { AwsRegion } from './types';
 
 /**
  *
@@ -12,6 +14,7 @@ import { PipelineStack } from './pipeline-stack';
  */
 const createIntegrationTestLambda = (
   app: PipelineStack,
+  appRegion: AwsRegion,
   testLambdaName: string
 ): Lambda.Function => {
   const testerLambda = new Lambda.Function(app, 'TestImageProcessor', {
@@ -21,6 +24,7 @@ const createIntegrationTestLambda = (
     timeout: Duration.minutes(2),
     environment: {
       SERVICE_TESTER: testLambdaName,
+      TestLambdaRegion: appRegion,
     },
   });
   testerLambda.addToRolePolicy(
@@ -48,7 +52,7 @@ export const addStageToPipeline = (
   pipeline: CodePipeline,
   stageName: string,
   accountId: string,
-  region: string
+  region: AwsRegion
 ): void => {
   const appStage = new AppStage(app, stageName, {
     env: {
@@ -57,8 +61,12 @@ export const addStageToPipeline = (
     },
   });
 
-  if (stageName === 'beta') {
-    const testerLambda = createIntegrationTestLambda(app, appStage.testLambdaName);
+  if (stageName === StageType.BETA) {
+    const testerLambda = createIntegrationTestLambda(
+      app,
+      region,
+      appStage.testLambdaName
+    );
     pipeline.addStage(appStage, {
       post: [new LambdaInvokeStep(testerLambda)],
     });

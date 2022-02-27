@@ -5,11 +5,12 @@ import os
 import signal
 
 LAMBDA_NAME = os.environ.get('SERVICE_TESTER')
+TEST_LAMBDA_REGION = os.environ.get('TestLambdaRegion')
 UNHANDLED_LAMBDA_ERROR_STATUS = 'Unhandled'
 
 # ToDo: set pipeline constants including pipeline region
-lambda_client = boto3.client('lambda', region_name='us-west-2')
-code_pipeline = boto3.client('codepipeline', region_name='us-west-2')
+lambda_client = boto3.client('lambda', region_name=TEST_LAMBDA_REGION)
+code_pipeline = boto3.client('codepipeline', region_name=os.environ.get('AWS_REGION'))
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
