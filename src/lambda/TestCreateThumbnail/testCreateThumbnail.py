@@ -47,6 +47,7 @@ def test_image_resized(key_name) -> None:
       error = ex.response['Error']
       if error['Code'] != '404' and error['Message'] != 'Not Found':
         raise ex
+      logger.info('Thumnbail not yet in destination Bucket')
 
       continue
 
@@ -61,6 +62,7 @@ def test_image_resized(key_name) -> None:
         error = ex.response['Error']
         assert_original_image_deleted(error.get('Code'), error.get('Message'))
         logger.info('Original image deleted from ingestion bucket')
+        return
 
     sleep(30)
 

@@ -37,7 +37,7 @@ def put_job_failure(job, message):
     Raises:
         Exception: Any exception thrown by .put_job_failure_result()
     '''
-    logger.info('Putting job failure')
+    logger.info(f'Putting job failure with message: {message}')
     code_pipeline.put_job_failure_result(jobId=job, failureDetails={'message': message, 'type': 'JobFailed'})
 
 def lambda_handler(event, context):
@@ -57,9 +57,11 @@ def lambda_handler(event, context):
   code_pipeline_id = event['CodePipeline.job']['id']
   try:
     response = lambda_client.invoke(FunctionName=LAMBDA_NAME)
+    logger.info(f'Received Response:\n{response}')
 
     if response.get('FunctionError') == UNHANDLED_LAMBDA_ERROR_STATUS:
       exception = json.loads(response.get('Payload').read().decode('utf-8'))
+      logger.info(exception)
       put_job_failure(code_pipeline_id, exception.get('errorMessage') or '')
     else:
       put_job_success(code_pipeline_id, 'Image Resize Successfull')
