@@ -68,7 +68,7 @@ export const addStageToPipeline = (
     },
   });
 
-  if (stageName === StageType.BETA) {
+  if (stageName === StageType.BETA || stageName === StageType.ALPHA) {
     const testerLambda = createIntegrationTestLambda(
       app,
       region,
