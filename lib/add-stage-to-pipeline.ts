@@ -9,15 +9,20 @@ import { StageType } from './constants/stages';
 import { AwsRegion } from './types';
 
 /**
+ * Creates the Lambda for the LambdaInvokeAction.
+ * This Lambda will execute integration tests for the
+ * Thumbnail generation service
  *
- * @returns
+ * @returns Lambda used for running integration tests in the pipeline
  */
 const createIntegrationTestLambda = (
   app: PipelineStack,
   appRegion: AwsRegion,
+  stageName: StageType,
   testLambdaName: string
 ): Lambda.Function => {
   const testerLambda = new Lambda.Function(app, 'TestImageProcessor', {
+    functionName: `IntegrationTest-${stageName}-${appRegion}`,
     code: Lambda.Code.fromAsset('src/lambda/tst'),
     handler: 'integrationTest.lambda_handler',
     runtime: Lambda.Runtime.PYTHON_3_8,
@@ -40,12 +45,14 @@ const createIntegrationTestLambda = (
 };
 
 /**
+ * Adds the stage and each of the stages stacks (in case of Wave deployment)
+ * to the CodePipeline pipeline
  *
- * @param app
- * @param pipeline
- * @param stageName
- * @param accountId
- * @param region
+ * @param app - Pipeline CDK Stack
+ * @param pipeline - CodePipeline pipeline
+ * @param stageName - Name of the stage to be created
+ * @param accountId - account where the stage will be deployed
+ * @param region - Region where stage is deployed
  */
 export const addStageToPipeline = (
   app: PipelineStack,
@@ -65,6 +72,7 @@ export const addStageToPipeline = (
     const testerLambda = createIntegrationTestLambda(
       app,
       region,
+      stageName,
       appStage.testLambdaName
     );
     pipeline.addStage(appStage, {

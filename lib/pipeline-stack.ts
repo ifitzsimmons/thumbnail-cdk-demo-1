@@ -3,12 +3,10 @@ import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { GitHubConstants } from './constants/pipeline';
 import { STAGES } from './constants/stages';
-import { addStageToPipeline } from './create-application-stage';
+import { addStageToPipeline } from './add-stage-to-pipeline';
 
 /**
- * ToDo:
- * 1. Copy image into artifact bucket for testing after stack deployment
- * 2. Clean up repo and create constants
+ * Creates the CodePipeline pipeline for the Thumbnail Generation Service
  */
 export class PipelineStack extends Stack {
   /**

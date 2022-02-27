@@ -4,8 +4,11 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { S3EventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { LayerVersion } from 'aws-cdk-lib/aws-lambda';
 
 export class ThumbnailCdkStack extends Stack {
+  testArtifactBucketName = 'thumbnail-test-artifacts';
+  testArtifactBucketArn = `arn:aws:s3:::${this.testArtifactBucketName}`;
   testerLambdaName: string;
 
   /**
@@ -20,16 +23,9 @@ export class ThumbnailCdkStack extends Stack {
       bucketName: `thumbnail-image-input-${this.region}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
-    const s3EventSource = new S3EventSource(inputBucket, {
-      events: [EventType.OBJECT_CREATED],
-    });
 
     const destinationBucket = new Bucket(this, 'ThumbnailImageDestinationBucket', {
       bucketName: `thumbnail-images-destination-${this.region}`,
-    });
-    const testArtifactBucket = new Bucket(this, 'ThumbnailTestArtifactsBucket', {
-      bucketName: `thumbnail-test-artifacts-${this.region}`,
-      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
 
     const pythonLayers = new lambda.LayerVersion(this, 'ImageResizeLayer', {
@@ -37,7 +33,30 @@ export class ThumbnailCdkStack extends Stack {
       code: lambda.Code.fromAsset('src/layers/myLayer'),
     });
 
+    this.createThumbnailGeneratorLambda(destinationBucket, inputBucket, pythonLayers);
+    this.createThumbnailTesterLambda(destinationBucket, inputBucket);
+  }
+
+  /**
+   * Creates Lambda that converts images uploaded to ingestion bucket into
+   * image thumbnails in destination bucket
+   *
+   * @param destinationBucket - Bucket where thumbnail is stored
+   * @param inputBucket - Ingestion Bucket that triggers the thumbnail generation
+   *                      with object uploads
+   * @param pythonLayers - PIP Dependencies
+   */
+  private createThumbnailGeneratorLambda = (
+    destinationBucket: Bucket,
+    inputBucket: Bucket,
+    pythonLayers: LayerVersion
+  ): void => {
+    const s3EventSource = new S3EventSource(inputBucket, {
+      events: [EventType.OBJECT_CREATED],
+    });
+
     const imageProcessor = new lambda.Function(this, 'ImageProcessor', {
+      functionName: 'ImageProcessor',
       code: lambda.Code.fromAsset('src/lambda/CreateThumbnail'),
       handler: 'createThumbnail.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
@@ -49,6 +68,7 @@ export class ThumbnailCdkStack extends Stack {
     });
     imageProcessor.addLayers(pythonLayers);
     imageProcessor.addEventSource(s3EventSource);
+
     imageProcessor.addToRolePolicy(
       new PolicyStatement({
         sid: 'GetImageFromSourceAndDelete',
@@ -65,7 +85,18 @@ export class ThumbnailCdkStack extends Stack {
         resources: [`${destinationBucket.bucketArn}/*`],
       })
     );
+  };
 
+  /**
+   * Creates a Lambda that can be used to test the Thumbnail generation service
+   *
+   * @param destinationBucket
+   * @param inputBucket
+   */
+  private createThumbnailTesterLambda = (
+    destinationBucket: Bucket,
+    inputBucket: Bucket
+  ): void => {
     const testerLambda = new lambda.Function(this, 'TestImageProcessor', {
       functionName: this.testerLambdaName,
       code: lambda.Code.fromAsset('src/lambda/TestCreateThumbnail'),
@@ -75,15 +106,21 @@ export class ThumbnailCdkStack extends Stack {
       environment: {
         DestinationBucket: destinationBucket.bucketName,
         SourceBucket: inputBucket.bucketName,
-        TestArtifactBucket: testArtifactBucket.bucketName,
+        TestArtifactBucket: this.testArtifactBucketName,
       },
     });
+
     testerLambda.addToRolePolicy(
       new PolicyStatement({
-        sid: 'GetTestImgFromBucket',
+        sid: 'GetTestImgFromArtifactAndDestinationBuckets',
         effect: Effect.ALLOW,
         actions: ['s3:GetObject', 's3:ListBucket'],
-        resources: [`${testArtifactBucket.bucketArn}/*`, testArtifactBucket.bucketArn],
+        resources: [
+          `${destinationBucket.bucketArn}/*`,
+          destinationBucket.bucketArn,
+          `${this.testArtifactBucketArn}/*`,
+          this.testArtifactBucketArn,
+        ],
       })
     );
     testerLambda.addToRolePolicy(
@@ -94,13 +131,5 @@ export class ThumbnailCdkStack extends Stack {
         resources: [`${inputBucket.bucketArn}/*`, inputBucket.bucketArn],
       })
     );
-    testerLambda.addToRolePolicy(
-      new PolicyStatement({
-        sid: 'AssertImageInDestinationBucket',
-        effect: Effect.ALLOW,
-        actions: ['s3:GetObject', 's3:ListBucket'],
-        resources: [`${destinationBucket.bucketArn}/*`, destinationBucket.bucketArn],
-      })
-    );
-  }
+  };
 }
