@@ -7,6 +7,19 @@ import { CodePipeline } from 'aws-cdk-lib/pipelines';
 import { PipelineStack } from './pipeline-stack';
 import { StageType } from './constants/stages';
 import { AwsRegion } from './types';
+import { Code, LayerVersion, Runtime } from 'aws-cdk-lib/aws-lambda';
+
+/**
+ * Create layer for lambda function that exposes winston logger
+ * @param app Pipeline app
+ * @returns Lambda Layer with logger.
+ */
+const createLoggerLayer = (app: PipelineStack, region: AwsRegion): LayerVersion => {
+  return new LayerVersion(app, `WinstonLayer-${region}`, {
+    compatibleRuntimes: [Runtime.NODEJS_12_X, Runtime.NODEJS_14_X],
+    code: Code.fromAsset('lib/integration-test/layers'),
+  });
+};
 
 /**
  * Creates the Lambda for the LambdaInvokeAction.
@@ -23,9 +36,9 @@ const createIntegrationTestLambda = (
 ): Lambda.Function => {
   const testerLambda = new Lambda.Function(app, `${stageName}TestImageProcessor`, {
     functionName: `IntegrationTest-${stageName}-${appRegion}`,
-    code: Lambda.Code.fromAsset('src/lambda/tst'),
-    handler: 'integrationTest.lambda_handler',
-    runtime: Lambda.Runtime.PYTHON_3_8,
+    code: Lambda.Code.fromAsset('lib/integration-test'),
+    handler: 'index.handler',
+    runtime: Lambda.Runtime.NODEJS_12_X,
     timeout: Duration.minutes(2),
     environment: {
       SERVICE_TESTER: testLambdaName,
@@ -40,13 +53,15 @@ const createIntegrationTestLambda = (
       resources: ['*'],
     })
   );
+  testerLambda.addLayers(createLoggerLayer(app, appRegion));
 
   return testerLambda;
 };
 
 /**
  * Adds the stage and each of the stages stacks (in case of Wave deployment)
- * to the CodePipeline pipeline
+ * to the CodePipeline pipeline. If stage is a pre-prod stage,
+ * it adds a Lambda invoke step that will run the integration tests.
  *
  * @param app - Pipeline CDK Stack
  * @param pipeline - CodePipeline pipeline
@@ -68,15 +83,15 @@ export const addStageToPipeline = (
     },
   });
 
+  const stage = pipeline.addStage(appStage);
   if (stageName === StageType.BETA || stageName === StageType.ALPHA) {
+    // Add lambda invokation step to pre-prod stages.
     const testerLambda = createIntegrationTestLambda(
       app,
       region,
       stageName,
       appStage.testLambdaName
     );
-    pipeline.addStage(appStage, {
-      post: [new LambdaInvokeStep(testerLambda)],
-    });
+    stage.addPost(new LambdaInvokeStep(testerLambda));
   }
 };

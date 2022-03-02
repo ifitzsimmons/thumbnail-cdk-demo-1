@@ -6,6 +6,23 @@ import { S3EventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { LayerVersion } from 'aws-cdk-lib/aws-lambda';
 
+const bucketPrefix = process.env.BUCKET_PREFIX;
+
+/**
+ * Creates a stack with two lambdas and 2 S3 Buckets
+ *
+ * When an image is uploaded to the ingestion bucket, the service will
+ * compress the image to a smaller, thumbnail-sized image.
+ *
+ * The other Lambda is used to test the service.
+ *
+ * Example:
+ * ```ts
+ * declare const this: Construct;
+ * const stack = ThumbnailCdkStack(this, 'ThumbnailGeneratorStack);
+ * ```
+ *
+ */
 export class ThumbnailCdkStack extends Stack {
   testArtifactBucketName = 'thumbnail-test-artifacts';
   testArtifactBucketArn = `arn:aws:s3:::${this.testArtifactBucketName}`;
@@ -19,13 +36,13 @@ export class ThumbnailCdkStack extends Stack {
 
     this.testerLambdaName = `TestImageProcessor-${this.region}`;
 
-    const inputBucket = new Bucket(this, 'ThumbnailImageInputBucket', {
-      bucketName: `thumbnail-image-input-${this.region}`,
+    const inputBucket = new Bucket(this, 'ThumbnailImageIngestionBucket', {
+      bucketName: `${bucketPrefix}-thumbnail-image-ingestion-${this.region}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
 
     const destinationBucket = new Bucket(this, 'ThumbnailImageDestinationBucket', {
-      bucketName: `thumbnail-images-destination-${this.region}`,
+      bucketName: `${bucketPrefix}-thumbnail-images-destination-${this.region}`,
     });
 
     const pythonLayers = new lambda.LayerVersion(this, 'ImageResizeLayer', {
@@ -99,10 +116,10 @@ export class ThumbnailCdkStack extends Stack {
   ): void => {
     const testerLambda = new lambda.Function(this, 'TestImageProcessor', {
       functionName: this.testerLambdaName,
-      code: lambda.Code.fromAsset('src/lambda/TestCreateThumbnail'),
-      handler: 'testCreateThumbnail.lambda_handler',
+      code: lambda.Code.fromAsset('src/lambda/CreateThumbnailDriver'),
+      handler: 'createThumbnailDriver.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
-      timeout: Duration.minutes(5),
+      timeout: Duration.minutes(2),
       environment: {
         DestinationBucket: destinationBucket.bucketName,
         SourceBucket: inputBucket.bucketName,

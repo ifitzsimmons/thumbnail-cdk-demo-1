@@ -6,10 +6,27 @@ import { STAGES } from './constants/stages';
 import { addStageToPipeline } from './add-stage-to-pipeline';
 
 /**
- * Creates the CodePipeline pipeline for the Thumbnail Generation Service
+ * Creates the pipeline with GitHub Source and a custom Synth step for the
+ * ThumbnailGenerator Service. Also provisions custom stages using the list
+ * of Stages defined in the pipeline constants file.
+ *
+ * Example:
+ * ```ts
+ * declare const app: cdk.App;
+ * const pipelineStack = new PipelineStack(app, 'ThumbnailCdkPipelineStack', {
+ *   env: {
+ *     account: PIPELINE_ACCOUNT,
+ *     region: PIPELINE_REGION,
+ *   },
+ * });
+ * ```
  */
 export class PipelineStack extends Stack {
   /**
+   * Creates the pipeline with GitHub Source and a custom Synth step.
+   * Also provisions custom stages using the list of Stages defined in
+   * the pipeline constants file.
+   *
    * @constructor
    */
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -26,6 +43,7 @@ export class PipelineStack extends Stack {
       commands: [
         'pip install tox',
         'npm ci',
+        'cd lib/integration-test/layers/nodejs && npm ci && cd -',
         'npm run test:lambda',
         'npm run build',
         'npx cdk synth',
