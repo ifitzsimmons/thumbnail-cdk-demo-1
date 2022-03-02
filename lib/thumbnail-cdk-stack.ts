@@ -5,8 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { S3EventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { LayerVersion } from 'aws-cdk-lib/aws-lambda';
-
-const bucketPrefix = process.env.BUCKET_PREFIX;
+import { BUCKET_PREFIX } from './constants/pipeline';
 
 /**
  * Creates a stack with two lambdas and 2 S3 Buckets
@@ -37,12 +36,12 @@ export class ThumbnailCdkStack extends Stack {
     this.testerLambdaName = `TestImageProcessor-${this.region}`;
 
     const inputBucket = new Bucket(this, 'ThumbnailImageIngestionBucket', {
-      bucketName: `${bucketPrefix}-thumbnail-image-ingestion-${this.region}`,
+      bucketName: `${BUCKET_PREFIX}-thumbnail-image-ingestion-${this.region}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
 
     const destinationBucket = new Bucket(this, 'ThumbnailImageDestinationBucket', {
-      bucketName: `${bucketPrefix}-thumbnail-images-destination-${this.region}`,
+      bucketName: `${BUCKET_PREFIX}-thumbnail-images-destination-${this.region}`,
     });
 
     const pythonLayers = new lambda.LayerVersion(this, 'ImageResizeLayer', {

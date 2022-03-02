@@ -1,10 +1,16 @@
 import { Context } from 'aws-lambda';
 import { CodePipeline, Lambda } from 'aws-sdk';
-import { createLogger, format } from 'winston';
+import { createLogger, format, transports } from 'winston';
 
 const logger = createLogger({
   level: 'info',
-  format: format.json(),
+  format: format.combine(
+    format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    format.json(),
+    // Format the metadata object
+    format.metadata({ fillExcept: ['message', 'level', 'timestamp', 'label'] })
+  ),
+  transports: [new transports.Console()],
 });
 
 const LAMBDA_NAME = <string>process.env.SERVICE_TESTER;
@@ -54,7 +60,7 @@ const putPipelineJobFailure = async (jobId: string, message: string): Promise<vo
  * to CodePipelines
  */
 module.exports.handler = async (event: PipelineJobLambdaEvent, context: Context) => {
-  logger.info(`EVENT:\n${JSON.stringify(event)}`);
+  logger.info('EVENT:', { event });
   const jobId = event['CodePipeline.job'].id;
 
   // Return Job Failure 3 seconds before Lambda times out.
@@ -74,7 +80,7 @@ module.exports.handler = async (event: PipelineJobLambdaEvent, context: Context)
 
       await putPipelineJobFailure(jobId, exception);
     } else {
-      putPipelineJobSuccess(jobId);
+      await putPipelineJobSuccess(jobId);
     }
   } catch (err) {
     await putPipelineJobFailure(jobId, (<Error>err).message);
