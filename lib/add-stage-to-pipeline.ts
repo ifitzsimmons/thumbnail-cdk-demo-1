@@ -41,8 +41,8 @@ const createIntegrationTestLambda = (
     runtime: Lambda.Runtime.NODEJS_12_X,
     timeout: Duration.minutes(2),
     environment: {
-      SERVICE_TESTER: testLambdaName,
-      TestLambdaRegion: appRegion,
+      CREATE_THUMBNAIL_DRIVER_NAME: testLambdaName,
+      THUMBNAIL_GENERATOR_REGION: appRegion,
     },
   });
   testerLambda.addToRolePolicy(

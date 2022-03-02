@@ -13,8 +13,8 @@ const logger = createLogger({
   transports: [new transports.Console()],
 });
 
-const LAMBDA_NAME = <string>process.env.SERVICE_TESTER;
-const TEST_LAMBDA_REGION = process.env.TestLambdaRegion;
+const LAMBDA_NAME = <string>process.env.CREATE_THUMBNAIL_DRIVER_NAME;
+const TEST_LAMBDA_REGION = process.env.THUMBNAIL_GENERATOR_REGION;
 const UNHANDLED_LAMBDA_ERROR_STATUS = 'Unhandled';
 
 const lambda = new Lambda({ region: TEST_LAMBDA_REGION });

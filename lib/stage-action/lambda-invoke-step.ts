@@ -1,15 +1,23 @@
-import {
-  CodePipelineActionFactoryResult,
-  ICodePipelineActionFactory,
-  ProduceActionOptions,
-  Step,
-} from 'aws-cdk-lib/pipelines';
+import * as pipelines from 'aws-cdk-lib/pipelines';
 import { IStage } from 'aws-cdk-lib/aws-codepipeline';
 import { LambdaInvokeAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as Lambda from 'aws-cdk-lib/aws-lambda';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
-export class LambdaInvokeStep extends Step implements ICodePipelineActionFactory {
+/**
+ * Adds a Lambda Invoke Action to a given stage
+ *
+ * Example:
+ * ```ts
+ * declare const lambdaFunction: Lambda.Function;
+ * declare const stage: pipelines.StageDeployment;
+ * stage.addPost(new LambdaInvokeStep(lambdaFunction))
+ * ```
+ */
+export class LambdaInvokeStep
+  extends pipelines.Step
+  implements pipelines.ICodePipelineActionFactory
+{
   /**
    * @constructor
    */
@@ -31,17 +39,16 @@ export class LambdaInvokeStep extends Step implements ICodePipelineActionFactory
   }
 
   /**
+   * Adds the Lambda Invoke Action Step to the provided stage
    *
-   * @param stage
-   * @param options
-   * @returns
+   * @param stage Stage within the CodePipeline
+   * @param options Inherited from the stage
+   * @returns Lambda Invoke Action
    */
   public produceAction(
     stage: IStage,
-    options: ProduceActionOptions
-  ): CodePipelineActionFactoryResult {
-    // This is where you control what type of Action gets added to the
-    // CodePipeline
+    options: pipelines.ProduceActionOptions
+  ): pipelines.CodePipelineActionFactoryResult {
     stage.addAction(
       new LambdaInvokeAction({
         actionName: options.actionName,

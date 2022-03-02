@@ -8,24 +8,34 @@ import { LayerVersion } from 'aws-cdk-lib/aws-lambda';
 import { BUCKET_PREFIX } from './constants/pipeline';
 
 /**
- * Creates a stack with two lambdas and 2 S3 Buckets
+ * Creates a stack with an ingestion bucket, a destination bucket
+ * and a Lambda function that converts images upload to the ingestion bucket
+ * into thumbnails stored in the destination bucket.
  *
  * When an image is uploaded to the ingestion bucket, the service will
  * compress the image to a smaller, thumbnail-sized image.
  *
- * The other Lambda is used to test the service.
  *
  * Example:
  * ```ts
  * declare const this: Construct;
- * const stack = ThumbnailCdkStack(this, 'ThumbnailGeneratorStack);
+ * const stack = new ThumbnailCdkStack(this, 'ThumbnailGeneratorStack');
  * ```
  *
  */
 export class ThumbnailCdkStack extends Stack {
+  /** Bucket that stores the image we'll use for testing */
   testArtifactBucketName = 'thumbnail-test-artifacts';
   testArtifactBucketArn = `arn:aws:s3:::${this.testArtifactBucketName}`;
+
+  /** Name of the Lambda that will be used for manual testing */
   testerLambdaName: string;
+
+  /** Bucket that stores thumbnail images */
+  destinationBucket: Bucket;
+
+  /** Bucket that accepts images to be converted to thumbnails */
+  inputBucket: Bucket;
 
   /**
    * @constructor
@@ -35,12 +45,12 @@ export class ThumbnailCdkStack extends Stack {
 
     this.testerLambdaName = `TestImageProcessor-${this.region}`;
 
-    const inputBucket = new Bucket(this, 'ThumbnailImageIngestionBucket', {
+    this.inputBucket = new Bucket(this, 'ThumbnailImageIngestionBucket', {
       bucketName: `${BUCKET_PREFIX}-thumbnail-image-ingestion-${this.region}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
 
-    const destinationBucket = new Bucket(this, 'ThumbnailImageDestinationBucket', {
+    this.destinationBucket = new Bucket(this, 'ThumbnailImageDestinationBucket', {
       bucketName: `${BUCKET_PREFIX}-thumbnail-images-destination-${this.region}`,
     });
 
@@ -49,8 +59,11 @@ export class ThumbnailCdkStack extends Stack {
       code: lambda.Code.fromAsset('src/layers/myLayer'),
     });
 
-    this.createThumbnailGeneratorLambda(destinationBucket, inputBucket, pythonLayers);
-    this.createThumbnailTesterLambda(destinationBucket, inputBucket);
+    this.createThumbnailGeneratorLambda(
+      this.destinationBucket,
+      this.inputBucket,
+      pythonLayers
+    );
   }
 
   /**
@@ -99,52 +112,6 @@ export class ThumbnailCdkStack extends Stack {
         effect: Effect.ALLOW,
         actions: ['s3:PutObject'],
         resources: [`${destinationBucket.bucketArn}/*`],
-      })
-    );
-  };
-
-  /**
-   * Creates a Lambda that can be used to test the Thumbnail generation service
-   *
-   * @param destinationBucket
-   * @param inputBucket
-   */
-  private createThumbnailTesterLambda = (
-    destinationBucket: Bucket,
-    inputBucket: Bucket
-  ): void => {
-    const testerLambda = new lambda.Function(this, 'TestImageProcessor', {
-      functionName: this.testerLambdaName,
-      code: lambda.Code.fromAsset('src/lambda/CreateThumbnailDriver'),
-      handler: 'createThumbnailDriver.lambda_handler',
-      runtime: lambda.Runtime.PYTHON_3_8,
-      timeout: Duration.minutes(2),
-      environment: {
-        DestinationBucket: destinationBucket.bucketName,
-        SourceBucket: inputBucket.bucketName,
-        TestArtifactBucket: this.testArtifactBucketName,
-      },
-    });
-
-    testerLambda.addToRolePolicy(
-      new PolicyStatement({
-        sid: 'GetTestImgFromArtifactAndDestinationBuckets',
-        effect: Effect.ALLOW,
-        actions: ['s3:GetObject', 's3:ListBucket'],
-        resources: [
-          `${destinationBucket.bucketArn}/*`,
-          destinationBucket.bucketArn,
-          `${this.testArtifactBucketArn}/*`,
-          this.testArtifactBucketArn,
-        ],
-      })
-    );
-    testerLambda.addToRolePolicy(
-      new PolicyStatement({
-        sid: 'PutImageInInputBucket',
-        effect: Effect.ALLOW,
-        actions: ['s3:PutObject', 's3:GetObject', 's3:ListBucket'],
-        resources: [`${inputBucket.bucketArn}/*`, inputBucket.bucketArn],
       })
     );
   };
