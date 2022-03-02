@@ -2,8 +2,8 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { GitHubConstants } from './constants/pipeline';
-import { STAGES } from './constants/stages';
-import { addStageToPipeline } from './add-stage-to-pipeline';
+import { Stage, STAGES, StageType } from './constants/stages';
+import { AppStage } from './app-stage';
 
 /**
  * Creates the pipeline with GitHub Source and a custom Synth step for the
@@ -22,16 +22,11 @@ import { addStageToPipeline } from './add-stage-to-pipeline';
  * ```
  */
 export class PipelineStack extends Stack {
-  /**
-   * Creates the pipeline with GitHub Source and a custom Synth step.
-   * Also provisions custom stages using the list of Stages defined in
-   * the pipeline constants file.
-   *
-   * @constructor
-   */
+  /** @constructor */
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
+    // Set pipeline source to your GitHub repo
     const pipelineTrigger = CodePipelineSource.connection(
       GitHubConstants.repo,
       GitHubConstants.branch,
@@ -41,23 +36,39 @@ export class PipelineStack extends Stack {
     const synthStep = new ShellStep('Synth', {
       input: pipelineTrigger,
       commands: [
+        // Install tox (required for running our python unit tests)
         'pip install tox',
+        // Install cdk project dependendencies
         'npm ci',
-        'cd lib/integration-test/layers/nodejs && npm ci && cd -',
+        // run Unit tests for python lambda functions
         'npm run test:lambda',
+        // Synthesize CDK app
         'npm run build',
         'npx cdk synth',
       ],
     });
 
+    // Create simple pipeline
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: 'ThumbnailServicePipeline',
       selfMutation: true,
       synth: synthStep,
     });
 
-    STAGES.forEach(({ stageName, account }) => {
-      addStageToPipeline(this, pipeline, stageName, account.id, account.region);
+    // Get alpha stage AWS account information
+    const { account } = <Stage>(
+      STAGES.find((stage) => stage.stageName === StageType.ALPHA)
+    );
+
+    // Create the pipeline stage, including both stacks
+    const appStage = new AppStage(this, StageType.ALPHA, {
+      env: {
+        account: account.id,
+        region: account.region,
+      },
     });
+
+    // Add stage to pipeline
+    pipeline.addStage(appStage);
   }
 }

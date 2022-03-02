@@ -3,6 +3,7 @@ import { AwsAccountInfo, AwsRegion } from '../types';
 export enum StageType {
   ALPHA = 'alpha',
   BETA = 'beta',
+  PROD = 'prod',
 }
 
 export type Stage = {
@@ -16,13 +17,6 @@ export const STAGES: Stage[] = [
     account: {
       id: '928182438953',
       region: AwsRegion.US_EAST_2,
-    },
-  },
-  {
-    stageName: StageType.BETA,
-    account: {
-      id: '928182438953',
-      region: AwsRegion.US_WEST_1,
     },
   },
 ];

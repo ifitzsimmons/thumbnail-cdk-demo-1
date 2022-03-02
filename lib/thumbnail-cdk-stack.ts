@@ -24,26 +24,15 @@ import { BUCKET_PREFIX } from './constants/pipeline';
  *
  */
 export class ThumbnailCdkStack extends Stack {
-  /** Bucket that stores the image we'll use for testing */
-  testArtifactBucketName = 'thumbnail-test-artifacts';
-  testArtifactBucketArn = `arn:aws:s3:::${this.testArtifactBucketName}`;
-
-  /** Name of the Lambda that will be used for manual testing */
-  testerLambdaName: string;
-
   /** Bucket that stores thumbnail images */
   destinationBucket: Bucket;
 
   /** Bucket that accepts images to be converted to thumbnails */
   inputBucket: Bucket;
 
-  /**
-   * @constructor
-   */
+  /** @constructor  */
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
-
-    this.testerLambdaName = `TestImageProcessor-${this.region}`;
 
     this.inputBucket = new Bucket(this, 'ThumbnailImageIngestionBucket', {
       bucketName: `${BUCKET_PREFIX}-thumbnail-image-ingestion-${this.region}`,
@@ -52,6 +41,7 @@ export class ThumbnailCdkStack extends Stack {
 
     this.destinationBucket = new Bucket(this, 'ThumbnailImageDestinationBucket', {
       bucketName: `${BUCKET_PREFIX}-thumbnail-images-destination-${this.region}`,
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     });
 
     const pythonLayers = new lambda.LayerVersion(this, 'ImageResizeLayer', {

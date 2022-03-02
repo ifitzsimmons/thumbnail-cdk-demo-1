@@ -5,12 +5,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 /**
- * Creates a stack with two lambdas and 2 S3 Buckets
- *
- * When an image is uploaded to the ingestion bucket, the service will
- * compress the image to a smaller, thumbnail-sized image.
- *
- * The other Lambda is used to test the service.
+ * Creates a stack with one lambda that will test the thumbnail
+ * generation service
  *
  * Example:
  * ```ts
@@ -29,11 +25,8 @@ import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 export class ThumbnailTestCdkStack extends Stack {
   testArtifactBucketName = 'thumbnail-test-artifacts';
   testArtifactBucketArn = `arn:aws:s3:::${this.testArtifactBucketName}`;
-  testerLambdaName: string;
 
-  /**
-   * @constructor
-   */
+  /** @constructor */
   constructor(
     scope: Construct,
     id: string,
@@ -43,23 +36,18 @@ export class ThumbnailTestCdkStack extends Stack {
   ) {
     super(scope, id, props);
 
-    this.testerLambdaName = `TestImageProcessor-${this.region}`;
-
     this.createThumbnailTesterLambda(destinationBucket, inputBucket);
   }
 
   /**
    * Creates a Lambda that can be used to test the Thumbnail generation service
-   *
-   * @param destinationBucket
-   * @param inputBucket
    */
   private createThumbnailTesterLambda = (
     destinationBucket: Bucket,
     inputBucket: Bucket
   ): void => {
     const testerLambda = new lambda.Function(this, 'TestImageProcessor', {
-      functionName: this.testerLambdaName,
+      functionName: `TestImageProcessor-${this.region}`,
       code: lambda.Code.fromAsset('src/lambda/CreateThumbnailDriver'),
       handler: 'createThumbnailDriver.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
@@ -71,6 +59,7 @@ export class ThumbnailTestCdkStack extends Stack {
       },
     });
 
+    // Allow lambda to Get and List objects in the artifact and destination buckets
     testerLambda.addToRolePolicy(
       new PolicyStatement({
         sid: 'GetTestImgFromArtifactAndDestinationBuckets',
@@ -84,6 +73,8 @@ export class ThumbnailTestCdkStack extends Stack {
         ],
       })
     );
+
+    // Allow the lambda to put objects in the application's ingestion bucket
     testerLambda.addToRolePolicy(
       new PolicyStatement({
         sid: 'PutImageInInputBucket',
