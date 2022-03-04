@@ -49,28 +49,17 @@ export class ThumbnailCdkStack extends Stack {
       code: lambda.Code.fromAsset('src/layers/myLayer'),
     });
 
-    this.createThumbnailGeneratorLambda(
-      this.destinationBucket,
-      this.inputBucket,
-      pythonLayers
-    );
+    this.createThumbnailGeneratorLambda(pythonLayers);
   }
 
   /**
    * Creates Lambda that converts images uploaded to ingestion bucket into
    * image thumbnails in destination bucket
    *
-   * @param destinationBucket - Bucket where thumbnail is stored
-   * @param inputBucket - Ingestion Bucket that triggers the thumbnail generation
-   *                      with object uploads
    * @param pythonLayers - PIP Dependencies
    */
-  private createThumbnailGeneratorLambda = (
-    destinationBucket: Bucket,
-    inputBucket: Bucket,
-    pythonLayers: LayerVersion
-  ): void => {
-    const s3EventSource = new S3EventSource(inputBucket, {
+  private createThumbnailGeneratorLambda = (pythonLayers: LayerVersion): void => {
+    const s3EventSource = new S3EventSource(this.inputBucket, {
       events: [EventType.OBJECT_CREATED],
     });
 
@@ -82,7 +71,7 @@ export class ThumbnailCdkStack extends Stack {
       memorySize: 512,
       timeout: Duration.minutes(1),
       environment: {
-        DestinationBucket: destinationBucket.bucketName,
+        DestinationBucket: this.destinationBucket.bucketName,
       },
     });
     imageProcessor.addLayers(pythonLayers);
@@ -93,7 +82,7 @@ export class ThumbnailCdkStack extends Stack {
         sid: 'GetImageFromSourceAndDelete',
         effect: Effect.ALLOW,
         actions: ['s3:GetObject', 's3:DeleteObject', 's3:ListBucket'],
-        resources: [`${inputBucket.bucketArn}/*`, inputBucket.bucketArn],
+        resources: [`${this.inputBucket.bucketArn}/*`, this.inputBucket.bucketArn],
       })
     );
     imageProcessor.addToRolePolicy(
@@ -101,7 +90,7 @@ export class ThumbnailCdkStack extends Stack {
         sid: 'PutThumbnailInDestinationBucket',
         effect: Effect.ALLOW,
         actions: ['s3:PutObject'],
-        resources: [`${destinationBucket.bucketArn}/*`],
+        resources: [`${this.destinationBucket.bucketArn}/*`],
       })
     );
   };
