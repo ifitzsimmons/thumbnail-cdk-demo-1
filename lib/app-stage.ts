@@ -8,6 +8,10 @@ import { ThumbnailTestCdkStack } from './thumbnail-testing-cdk-stack';
  * for the Thumbnail Generation Service
  */
 export class AppStage extends cdk.Stage {
+  // Name of the Lambda function that is used for manual testing
+  // This will be used when we incorporate the integration test.
+  testLambdaName: string;
+  
   /** @constructor */
   constructor(scope: Construct, id: string, props?: cdk.StageProps) {
     super(scope, id, props);
@@ -16,11 +20,12 @@ export class AppStage extends cdk.Stage {
     const thumbnailStack = new ThumbnailCdkStack(this, 'ThumbnailCreatorStack');
 
     // Create the resources needed to test the thumbnail generator service
-    new ThumbnailTestCdkStack(
+    const thumbnailTestStack = new ThumbnailTestCdkStack(
       this,
       'ThumbnailTestStack',
       thumbnailStack.destinationBucket,
       thumbnailStack.inputBucket
     );
+    this.testLambdaName = thumbnailTestStack.testerLambdaName;
   }
 }
