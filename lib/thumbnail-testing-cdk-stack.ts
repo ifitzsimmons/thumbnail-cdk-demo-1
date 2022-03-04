@@ -25,6 +25,8 @@ import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 export class ThumbnailTestCdkStack extends Stack {
   testArtifactBucketName = 'thumbnail-test-artifacts';
   testArtifactBucketArn = `arn:aws:s3:::${this.testArtifactBucketName}`;
+  // Used once we incorporate integration tests.
+  testerLambdaName: string;
 
   /** @constructor */
   constructor(
@@ -35,7 +37,7 @@ export class ThumbnailTestCdkStack extends Stack {
     props?: StackProps
   ) {
     super(scope, id, props);
-
+    this.testerLambdaName = `TestImageProcessor-${this.region}`;
     this.createThumbnailTesterLambda(destinationBucket, inputBucket);
   }
 
@@ -47,7 +49,7 @@ export class ThumbnailTestCdkStack extends Stack {
     inputBucket: Bucket
   ): void => {
     const testerLambda = new lambda.Function(this, 'TestImageProcessor', {
-      functionName: `TestImageProcessor-${this.region}`,
+      functionName: this.testerLambdaName,
       code: lambda.Code.fromAsset('src/lambda/CreateThumbnailDriver'),
       handler: 'createThumbnailDriver.lambda_handler',
       runtime: lambda.Runtime.PYTHON_3_8,
